@@ -1,0 +1,22 @@
+window {
+    font-size:14pt;
+}
+
+.sidebar row {
+    color: #cac4c9;
+}
+.sidebar row:selected {
+    background-color: #4C9689;
+    color: #fff;
+    outline:none;
+}
+.sidebar viewport {
+    background-color: #4d394b;
+}
+
+#chat_log text {
+    border-bottom:1px solid #ddd; /* separator between chat_log and chat_input */
+}
+#chat_input {
+    padding:0.5em;
+}

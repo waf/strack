@@ -1,0 +1,20 @@
+[package]
+name = "strack"
+version = "0.0.1"
+authors = ["Will Fuqua <wafuqua@gmail.com>"]
+
+[dependencies]
+slack = "0.19.0"
+relm = "^0.13.0"
+relm-derive = "^0.13.0"
+relm-attributes = "^0.13.0"
+futures-glib = "^0.4.0"
+gio = "0.4.0"
+gdk = "0.8.0"
+
+[dependencies.gtk]
+version = "0.4.0"
+features = ["v3_16"]
+
+[features]
+default = ["relm/unstable", "relm-attributes/unstable", "relm-derive/unstable"]
