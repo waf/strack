@@ -23,5 +23,4 @@ I'd love help on this, I'm new to rust and I'm sure there's many things to impro
 
 1. Clone the repo
 2. Install [rust nightly](https://doc.rust-lang.org/book/second-edition/ch01-03-how-rust-is-made-and-nightly-rust.html) and then run `cargo run`.
-2. Install libsoup
 3. I personally use [IntelliJ Rust](https://intellij-rust.github.io/) for development, but any editor will work fine.
