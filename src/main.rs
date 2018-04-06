@@ -8,135 +8,46 @@ extern crate relm_attributes;
 extern crate gtk;
 extern crate gio;
 extern crate gdk;
-extern crate futures_glib;
+extern crate slack;  // real-time messaging (rtm) client
+extern crate slack_api; // web api and models
+extern crate config;
+extern crate failure;
 
-use gtk::{
-    CssProvider,
-    CssProviderExt,
-    GtkWindowExt,
-    Inhibit,
-    OrientableExt,
-    StackExt,
-    StackSidebarExt,
-    TextViewExt,
-    WidgetExt,
+pub mod slack_integration;
+pub mod ui;
 
-};
-use gio::File;
-use gdk::Screen;
+use std::thread;
+use std::sync::mpsc;
+use std::collections::HashMap;
 use relm::Widget;
-use relm_attributes::widget;
-
-// model
-pub struct Workspace
-{
-    pub channels: Vec<Channel>
-}
-pub struct Channel
-{
-    pub name: String
-}
-
-#[derive(Msg)]
-pub enum Msg {
-    Quit,
-}
-
-#[widget]
-impl Widget for ChatView {
-    fn model() -> () {
-    }
-
-    fn init_view(&mut self) {
-    }
-
-    fn update(&mut self, _event: ()) {
-    }
-
-    view! {
-        gtk::Box {
-            orientation: gtk::Orientation::Vertical,
-
-            gtk::ScrolledWindow {
-                gtk::TextView {
-                    name: "chat_log",
-                    hexpand: true,
-                    vexpand: true,
-                    editable: false,
-                    cursor_visible: false,
-                    wrap_mode: gtk::WrapMode::Word
-                },
-            },
-
-            gtk::TextView {
-                name: "chat_input",
-            },
-        }
-    }
-}
-
-#[widget]
-impl Widget for Win {
-    fn model() -> Workspace {
-        Workspace  {
-            channels: Vec::new()
-        }
-    }
-
-    fn init_view(&mut self) {
-        // load style sheet
-        let css = CssProvider::new();
-        css.load_from_file(&File::new_for_commandline_arg("./style.css")).unwrap();
-        gtk::StyleContext::add_provider_for_screen(&Screen::get_default().unwrap(), &css, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
-
-        // add some fake slack channels
-        let general = relm::init::<ChatView>(()).unwrap();
-        self.stack.add_titled(general.widget(), "general", "# general");
-        let random = relm::init::<ChatView>(()).unwrap();
-        self.stack.add_titled(random.widget(), "random", "# random");
-
-        self.sidebar.set_stack(&self.stack);
-    }
-
-    fn update(&mut self, event: Msg) {
-        match event {
-            Msg::Quit => gtk::main_quit()
-        }
-    }
-
-    /*
-    fn subscriptions(&mut self, relm: &Relm<Self>) {
-        let stream = Interval::new(Duration::from_secs(1));
-        relm.connect_exec_ignore_err(stream, Msg::Update);
-    }
-    */
-
-    view! {
-        #[name="window"]
-        gtk::Window {
-            title: "Strack",
-            gtk::Box {
-                orientation: gtk::Orientation::Horizontal,
-
-                #[name="sidebar"]
-                gtk::StackSidebar {
-                    property_width_request: 170,
-                    property_height_request: 600
-                },
-
-                #[name="stack"]
-                gtk::Stack {
-                    hexpand: true,
-                    vexpand: true,
-                    property_width_request: 800,
-                    property_height_request: 600
-                },
-            },
-            delete_event(_, _) => (Msg::Quit, Inhibit(false)),
-        }
-    }
-}
+use slack::{RtmClient};
+use slack_integration::connection::SlackApi;
+use ui::main_window::MainWindow;
+use failure::Error;
 
 fn main() {
-    Win::run(()).unwrap();
+    let settings = read_settings("Setting.toml")
+        .expect("Could not find Settings.toml configuration file");
+
+    let (sender, receiver) = mpsc::channel();
+
+    // set up a real-time connection to slack in a background thread.
+    // it will use a channel to communicate with the UI.
+    thread::spawn(move|| {
+        let mut handler = SlackApi {
+            incoming: sender
+        };
+        let token = &settings["token"];
+        RtmClient::login_and_run(token, &mut handler).unwrap();
+    });
+
+    // start main window
+    MainWindow::run(receiver).unwrap();
+}
+
+fn read_settings(filename: &str) -> Result<HashMap<String, String>, Error> {
+    let mut settings_file = config::Config::default();
+    settings_file.merge(config::File::with_name(filename))?;
+    let settings = settings_file.try_into::<HashMap<String, String>>()?;
+    Ok(settings)
 }

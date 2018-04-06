@@ -1,3 +1,4 @@
+Settings.toml
 /.idea
 /target/
 **/*.rs.bk
