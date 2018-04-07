@@ -126,7 +126,8 @@ impl MainWindow {
                     },
                     _ => {}
                 }
-            }
+            },
+            SlackMessage::End(msg) => println!("{}", msg)
         }
     }
 }
