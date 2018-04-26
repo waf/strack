@@ -14,7 +14,6 @@ extern crate failure;
 pub mod slack_integration;
 pub mod ui;
 
-use std::sync::mpsc;
 use std::collections::HashMap;
 use failure::Error;
 use relm::Widget;
@@ -25,15 +24,13 @@ fn main() {
     let settings = read_settings("Settings.toml")
         .expect("Could not find Settings.toml configuration file.");
 
-    let (sender, receiver) = mpsc::channel();
-
     // set up a real-time connection to slack in a background thread.
     // it will use a channel to communicate with the UI.
     let token = settings["token"].to_owned();
-    SlackConnection::start_in_background(token, sender);
+    let connection = SlackConnection::start_in_background(token);
 
     // start main window
-    MainWindow::run(receiver).unwrap();
+    MainWindow::run(connection).unwrap();
 }
 
 fn read_settings(filename: &str) -> Result<HashMap<String, String>, Error> {

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::mpsc::{Receiver, TryRecvError};
+use std::sync::mpsc::{TryRecvError};
 use relm_attributes::widget;
 use relm::{self, Relm, Widget, interval};
 use gio::File;
@@ -17,25 +17,26 @@ use gtk::{
 };
 use ui::chat_view::{ChatView, ChatMsg, Channel};
 use slack;
-use slack_integration::connection::{SlackMessage};
+use slack_integration::connection::{SlackConnection, SlackMessage};
 
 pub struct Workspace
 {
-    pub receiver: Receiver<SlackMessage>,
+    pub connection: SlackConnection,
     pub channels: HashMap<String, relm::Component<ChatView>>,
 }
 
 #[derive(Msg)]
 pub enum Msg {
     Quit,
+    UserMessage(String),
     TryUpdate,
 }
 
 #[widget]
 impl Widget for MainWindow {
-    fn model(receiver: Receiver<SlackMessage>) -> Workspace {
+    fn model(connection: SlackConnection) -> Workspace {
         Workspace  {
-            receiver: receiver,
+            connection: connection,
             channels: HashMap::new()
         }
     }
@@ -52,8 +53,9 @@ impl Widget for MainWindow {
     fn update(&mut self, event: Msg) {
         match event {
             Msg::Quit => gtk::main_quit(),
+            Msg::UserMessage(_) => println!("main window received message"),
             Msg::TryUpdate => {
-                match self.model.receiver.try_recv() {
+                match self.model.connection.incoming_receiver.try_recv() {
                     Ok(msg) => self.handle_slack_message(msg),
                     Err(_disconnect @ TryRecvError::Empty) => { /* no updates */ },
                     Err(_err @ TryRecvError::Disconnected) => println!("Disconnected :("),
